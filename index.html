@@ -2858,10 +2858,7 @@
         } catch(e) {}
     }
 
-    // Disparar respaldo al cerrar la pestaña o app
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') respaldoAutomatico();
-    });
+    // Disparar respaldo solo al cerrar la pestaña o ventana
     window.addEventListener('beforeunload', () => respaldoAutomatico());
 
     async function importarDatos(e){
