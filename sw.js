@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinteliv-v1';
+const CACHE_NAME = 'sinteliv-v2';
 const ASSETS = [
     './',
     './index.html',
