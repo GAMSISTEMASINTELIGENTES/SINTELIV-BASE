@@ -2858,8 +2858,15 @@
         } catch(e) {}
     }
 
-    // Disparar respaldo solo al cerrar la pestaña o ventana
-    window.addEventListener('beforeunload', () => respaldoAutomatico());
+    // Respaldo automático solo al cerrar la pestaña/ventana (no al recargar)
+    let _esRecarga = false;
+    document.addEventListener('keydown', e => {
+        if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) _esRecarga = true;
+    });
+    window.addEventListener('beforeunload', () => {
+        if (!_esRecarga) respaldoAutomatico();
+        _esRecarga = false;
+    });
 
     async function importarDatos(e){
         const reader=new FileReader();
