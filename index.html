@@ -297,6 +297,36 @@
                     </div>
                 </details>
                 <hr>
+                <!-- CONFIGURACIÓN DEL NEGOCIO — solo visible en modo dueño -->
+                <details id="configNegocioPanel" style="margin-bottom:10px; display:none;">
+                    <summary style="cursor:pointer;color:var(--primary);font-weight:bold;font-size:0.85rem;margin-bottom:8px;">🏪 Configuración del Negocio</summary>
+                    <div style="padding-top:8px;">
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Nombre del negocio:</label>
+                        <input type="text" id="cfgNombre" placeholder="Ej: Papelería La Secu" style="margin-bottom:8px;">
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Dirección:</label>
+                        <input type="text" id="cfgDireccion" placeholder="Ej: Calle Hidalgo #123" style="margin-bottom:8px;">
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Teléfono / WhatsApp:</label>
+                        <input type="text" id="cfgTelefono" placeholder="Ej: 313 149 0365" style="margin-bottom:8px;">
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Frase o slogan del negocio:</label>
+                        <input type="text" id="cfgSlogan" placeholder='Ej: "En frente de la secundaria 1"' style="margin-bottom:8px;">
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Logo del negocio (aparece en el ticket):</label>
+                        <div style="margin-bottom:10px;">
+                            <img id="cfgLogoPreview" style="max-width:120px;max-height:60px;display:none;border:1px solid #ddd;border-radius:6px;padding:4px;margin-bottom:6px;">
+                            <div style="display:flex;gap:6px;align-items:center;">
+                                <button onclick="document.getElementById('cfgLogoInput').click()" style="background:var(--accent);color:white;padding:7px 12px;font-size:0.78rem;border-radius:6px;flex:1;">📷 Subir logo</button>
+                                <button onclick="quitarLogo()" style="background:#ddd;color:#333;padding:7px 12px;font-size:0.78rem;border-radius:6px;">✕ Quitar</button>
+                            </div>
+                            <input type="file" id="cfgLogoInput" accept="image/*" style="display:none;" onchange="previsualizarLogo(event)">
+                        </div>
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Mensaje en el ticket:</label>
+                        <input type="text" id="cfgMensaje" placeholder="Ej: ¡Gracias por su preferencia!" style="margin-bottom:10px;">
+                        <label style="font-size:0.75rem;color:#666;font-weight:bold;display:block;margin-bottom:3px;">Cambiar contraseña de dueño:</label>
+                        <input type="password" id="cfgPassNueva" placeholder="Nueva contraseña" style="margin-bottom:4px;">
+                        <input type="password" id="cfgPassConfirm" placeholder="Confirmar contraseña" style="margin-bottom:10px;">
+                        <button onclick="guardarConfigNegocio()" style="background:var(--success);color:white;width:100%;padding:10px;border-radius:6px;font-weight:bold;">💾 Guardar configuración</button>
+                    </div>
+                </details>
+                <hr>
                 <button class="btn-danger" onclick="limpiarTodo()">⚠️ REINICIO TOTAL</button>
             </div>
         </div>
@@ -686,13 +716,8 @@
     <div class="ticket" id="ticketPrint"> 
         <center>
 <img src="pape2.png" id="logosf" class="ticket-logo" style="display:block;">
-            <strong style="font-size: 1.2rem;">Papelería "La Secu"</strong><br>
-            <div id="businessData" style="font-size: 15px; line-height: 1.2;">
-                Andrés Quintana Roo #416, Fracc.San Miguel <br> Cp. 28180<br>
-                Tecomán, Colima.<br>
-                WhatsApp: 313 149 0365<br>
-                <em>"En frente de la secundaria 1"</em>
-            </div>
+            <strong id="tNombreNegocio" style="font-size: 1.2rem;">Mi Negocio</strong><br>
+            <div id="businessData" style="font-size: 15px; line-height: 1.2;"></div>
         </center>
         <hr style="border: 1px dashed #000">
         <p id="tClient" style="font-size: 15px; margin-bottom: 5px; font-weight: bold;"></p>
@@ -707,7 +732,7 @@
         <div style="font-size: 15px; display: flex; justify-content: space-between;"><span>CAMBIO:</span><span id="tChange"></span></div>
         <div id="tMetodoPago" style="font-size: 15px; display: flex; justify-content: space-between; margin-top:2px;"><span>MÉTODO:</span><span id="tMetodoLabel"></span></div>
         <hr style="border: 1px dashed #000">
-        <center><small>¡Gracias por su preferencia!</small></center>
+        <center><small id="tMensajeTicket">¡Gracias por su preferencia!</small></center>
     </div>
     <div style="margin-left:20px; display:flex; flex-direction:column; gap:10px" class="no-print">
         <button onclick="enviarWhatsApp()" style="background:var(--whatsapp); color:white; padding:12px;">📲 WHATSAPP</button>
@@ -3265,22 +3290,27 @@
     // ============================================================
     // MODO DUEÑO / EMPLEADO — protección de costos y ganancias
     // ============================================================
-    const DUENO_PASSWORD = 'GSI021098'; // <-- cámbiala aquí por la que quieras
+    const MASTER_PASSWORD = 'GSI021098'; // contraseña maestra de recuperación — solo para el proveedor
     let modoDueno = false;
+
+    function getDuenoPassword() {
+        return localStorage.getItem('sinteliv_dueno_pass') || 'GSI021098';
+    }
 
     function aplicarModoVisual() {
         document.body.classList.toggle('modo-empleado', !modoDueno);
         const btn = document.getElementById('lockBtn');
         if (btn) btn.innerText = modoDueno ? '🔓 Modo Dueño' : '🔒 Modo Empleado';
+        // Mostrar u ocultar panel de configuración del negocio
+        const panel = document.getElementById('configNegocioPanel');
+        if (panel) panel.style.display = modoDueno ? 'block' : 'none';
     }
 
     function toggleModoDueno() {
         if (modoDueno) {
-            // Bloquear de nuevo — no requiere contraseña
             modoDueno = false;
             aplicarModoVisual();
         } else {
-            // Pedir contraseña para desbloquear
             document.getElementById('duenoPasswordInput').value = '';
             document.getElementById('lockModal').style.display = 'flex';
             setTimeout(() => document.getElementById('duenoPasswordInput').focus(), 100);
@@ -3289,10 +3319,11 @@
 
     document.getElementById('duenoOkBtn').onclick = () => {
         const val = document.getElementById('duenoPasswordInput').value;
-        if (val === DUENO_PASSWORD) {
+        if (val === getDuenoPassword() || val === MASTER_PASSWORD) {
             modoDueno = true;
             aplicarModoVisual();
             document.getElementById('lockModal').style.display = 'none';
+            cargarConfigNegocioEnFormulario();
         } else {
             alert('Contraseña incorrecta.');
         }
@@ -3303,6 +3334,115 @@
     document.getElementById('duenoPasswordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') document.getElementById('duenoOkBtn').click();
     });
+
+    // ============================================================
+    // CONFIGURACIÓN DEL NEGOCIO
+    // ============================================================
+    function getConfigNegocio() {
+        try { return JSON.parse(localStorage.getItem('sinteliv_config_negocio') || '{}'); } catch(e) { return {}; }
+    }
+
+    function aplicarConfigNegocioAlTicket() {
+        const cfg = getConfigNegocio();
+        const nombre = cfg.nombre || 'Mi Negocio';
+        const direccion = cfg.direccion || '';
+        const telefono = cfg.telefono || '';
+        const mensaje = cfg.mensaje || '¡Gracias por su preferencia!';
+        const slogan = cfg.slogan || '';
+        const logo = localStorage.getItem('sinteliv_logo') || '';
+
+        const elNombre = document.getElementById('tNombreNegocio');
+        if (elNombre) elNombre.textContent = nombre;
+
+        const elData = document.getElementById('businessData');
+        if (elData) {
+            let html = '';
+            if (direccion) html += direccion + '<br>';
+            if (telefono) html += 'Tel: ' + telefono + '<br>';
+            if (cfg.slogan) html += `<em>${cfg.slogan}</em>`;
+            elData.innerHTML = html;
+        }
+
+        const elMensaje = document.getElementById('tMensajeTicket');
+        if (elMensaje) elMensaje.textContent = mensaje;
+
+        const elLogo = document.getElementById('logosf');
+        if (elLogo) {
+            if (logo) { elLogo.src = logo; elLogo.style.display = 'block'; }
+            else { elLogo.style.display = 'none'; }
+        }
+    }
+
+    function previsualizarLogo(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const preview = document.getElementById('cfgLogoPreview');
+            if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+            // Guardar temporalmente para cuando se guarde la config
+            window._logoTemp = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function quitarLogo() {
+        window._logoTemp = '';
+        const preview = document.getElementById('cfgLogoPreview');
+        if (preview) { preview.src = ''; preview.style.display = 'none'; }
+        document.getElementById('cfgLogoInput').value = '';
+    }
+
+    function cargarConfigNegocioEnFormulario() {
+        const cfg = getConfigNegocio();
+        const f = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
+        f('cfgNombre', cfg.nombre);
+        f('cfgDireccion', cfg.direccion);
+        f('cfgTelefono', cfg.telefono);
+        f('cfgSlogan', cfg.slogan);
+        f('cfgMensaje', cfg.mensaje);
+        document.getElementById('cfgPassNueva').value = '';
+        document.getElementById('cfgPassConfirm').value = '';
+        // Mostrar logo guardado en preview
+        const logo = localStorage.getItem('sinteliv_logo') || '';
+        const preview = document.getElementById('cfgLogoPreview');
+        if (preview && logo) { preview.src = logo; preview.style.display = 'block'; }
+        window._logoTemp = undefined; // limpiar temporal
+    }
+
+    function guardarConfigNegocio() {
+        const get = id => document.getElementById(id)?.value?.trim() || '';
+        const nombre = get('cfgNombre');
+        const direccion = get('cfgDireccion');
+        const telefono = get('cfgTelefono');
+        const mensaje = get('cfgMensaje');
+        const passNueva = get('cfgPassNueva');
+        const passConfirm = get('cfgPassConfirm');
+
+        if (!nombre) { alert('El nombre del negocio no puede estar vacío.'); return; }
+
+        // Cambiar contraseña si se llenó
+        if (passNueva || passConfirm) {
+            if (passNueva !== passConfirm) { alert('Las contraseñas no coinciden.'); return; }
+            if (passNueva.length < 4) { alert('La contraseña debe tener al menos 4 caracteres.'); return; }
+            localStorage.setItem('sinteliv_dueno_pass', passNueva);
+        }
+
+        const slogan = get('cfgSlogan');
+        const cfg = { nombre, direccion, telefono, slogan, mensaje };
+        localStorage.setItem('sinteliv_config_negocio', JSON.stringify(cfg));
+        // Guardar logo si se subió o quitó
+        if (window._logoTemp !== undefined) {
+            if (window._logoTemp) localStorage.setItem('sinteliv_logo', window._logoTemp);
+            else localStorage.removeItem('sinteliv_logo');
+            window._logoTemp = undefined;
+        }
+        aplicarConfigNegocioAlTicket();
+        alert('✅ Configuración guardada correctamente.');
+    }
+
+    // Aplicar configuración al cargar
+    aplicarConfigNegocioAlTicket();
 
     // Iniciar siempre en modo empleado por seguridad
     aplicarModoVisual();
